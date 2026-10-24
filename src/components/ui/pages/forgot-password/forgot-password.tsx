@@ -10,6 +10,7 @@ export const ForgotPasswordUI = ({
   email,
   setEmail,
   handleSubmit,
+  isLoading = false,
 }: PageUIProps): React.JSX.Element => (
   <main className={styles.container}>
     <div className={`pt-6 ${styles.wrapCenter}`}>
@@ -28,8 +29,8 @@ export const ForgotPasswordUI = ({
           />
         </div>
         <div className={`pb-6 ${styles.button}`}>
-          <Button type="primary" size="medium" htmlType="submit">
-            Восстановить
+          <Button type="primary" size="medium" htmlType="submit" disabled={isLoading}>
+            {isLoading ? 'Отправляем...' : 'Восстановить'}
           </Button>
         </div>
         {errorText && (

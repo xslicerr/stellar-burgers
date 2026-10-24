@@ -12,12 +12,15 @@ export const Modal = memo(function Modal({
   children,
 }: TModalProps): React.JSX.Element {
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const handleEsc = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose();
     };
 
     document.addEventListener('keydown', handleEsc);
     return (): void => {
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleEsc);
     };
   }, [onClose]);

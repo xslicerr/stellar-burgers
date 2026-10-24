@@ -4,8 +4,11 @@ import type { TIngredient, TOrder, TUser } from './types';
 
 const URL = process.env.BURGER_API_URL;
 
-const checkResponse = <T>(res: Response): Promise<T> =>
-  res.ok ? res.json() : res.json().then((err) => Promise.reject(toApiError(err)));
+const checkResponse = async <T>(res: Response): Promise<T> => {
+  const payload = (await res.json()) as T & { success?: boolean };
+  if (!res.ok || payload.success === false) throw toApiError(payload);
+  return payload;
+};
 
 type TServerResponse<T = unknown> = {
   success: boolean;
@@ -17,6 +20,7 @@ type TServerResponse<T = unknown> = {
  * kept in `cause` for debugging.
  */
 const toApiError = (payload: unknown): Error => {
+  if (payload instanceof Error) return payload;
   const message =
     typeof payload === 'object' &&
     payload !== null &&
@@ -33,7 +37,7 @@ type TRefreshResponse = TServerResponse<{
   accessToken: string;
 }>;
 
-export const refreshToken = (): Promise<TRefreshResponse> =>
+const refreshTokenRequest = (): Promise<TRefreshResponse> =>
   fetch(`${URL}/auth/token`, {
     method: 'POST',
     headers: {
@@ -52,6 +56,15 @@ export const refreshToken = (): Promise<TRefreshResponse> =>
       setCookie('accessToken', refreshData.accessToken);
       return refreshData;
     });
+
+// Одновременные защищённые запросы используют одно обновление токена.
+let refreshPromise: Promise<TRefreshResponse> | null = null;
+export const refreshToken = (): Promise<TRefreshResponse> => {
+  refreshPromise ??= refreshTokenRequest().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+};
 
 export const fetchWithRefresh = async <T>(
   url: RequestInfo,
