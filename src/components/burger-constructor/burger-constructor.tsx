@@ -12,6 +12,8 @@ import { useDispatch, useSelector } from '@services/store';
 
 import { RequestError } from '../request-error';
 
+import styles from './burger-constructor.module.css';
+
 export const BurgerConstructor = (): React.JSX.Element => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -42,7 +44,7 @@ export const BurgerConstructor = (): React.JSX.Element => {
     constructorItems.ingredients.reduce((total, item) => total + item.price, 0);
 
   return (
-    <div>
+    <div className={styles.container}>
       <BurgerConstructorUI
         price={price}
         orderRequest={orderRequest}

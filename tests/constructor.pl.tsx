@@ -129,15 +129,13 @@ test.beforeEach(async ({ api }) => {
 });
 
 const authorize = async (page: Page): Promise<void> => {
-  await page
-    .context()
-    .addCookies([
-      {
-        name: 'accessToken',
-        value: encodeURIComponent('Bearer test-access'),
-        url: 'http://localhost:4000',
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: 'accessToken',
+      value: encodeURIComponent('Bearer test-access'),
+      url: 'http://localhost:4000',
+    },
+  ]);
   await page.addInitScript(() => {
     localStorage.setItem('refreshToken', 'test-refresh');
   });
@@ -161,9 +159,11 @@ test('ингредиент открывается над конструктор�
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
   await expect(page).toHaveURL('http://localhost:4000/');
   await page.getByRole('link', { name: /Космическая булка/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('link', { name: /Космическая булка/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await page.mouse.click(5, 150);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
@@ -288,15 +288,13 @@ test('профиль: отмена возвращает данные, сохра
   expect(await page.evaluate(() => localStorage.getItem('refreshToken'))).toBeNull();
 });
 test('просроченная сессия обновляется без показа формы входа', async ({ page, api }) => {
-  await page
-    .context()
-    .addCookies([
-      {
-        name: 'accessToken',
-        value: encodeURIComponent('Bearer expired'),
-        url: 'http://localhost:4000',
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: 'accessToken',
+      value: encodeURIComponent('Bearer expired'),
+      url: 'http://localhost:4000',
+    },
+  ]);
   await page.addInitScript(() => localStorage.setItem('refreshToken', 'test-refresh'));
   await page.goto('/profile');
   await expect(page.locator('input[name="name"]')).toHaveValue('Никита');
@@ -406,4 +404,76 @@ test('неизвестный адрес показывает 404', async ({ page
   await expect(
     page.getByText('Страница не найдена. Ошибка 404.', { exact: true })
   ).toBeVisible();
+});
+
+for (const height of [720, 1000]) {
+  test(`длинный бургер прокручивается внутри конструктора при высоте окна ${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height });
+    await page.goto('/');
+    await add(page, 'Космическая булка');
+    for (let index = 0; index < 16; index++) await add(page, 'Метеоритная котлета');
+    await add(page, 'Лунный сыр');
+
+    const constructor = page.locator('section').filter({
+      has: page.getByRole('button', { name: 'Оформить заказ' }),
+    });
+    const filling = constructor.locator('ul');
+    const submit = constructor.getByRole('button', { name: 'Оформить заказ' });
+    const topBun = constructor.getByText('Космическая булка (верх)', { exact: true });
+    await expect(filling.getByRole('listitem')).toHaveCount(17);
+    const metrics = await filling.evaluate((element) => ({
+      height: element.clientHeight,
+      contentHeight: element.scrollHeight,
+      bottom: element.getBoundingClientRect().bottom,
+    }));
+    expect(metrics.height).toBeGreaterThan(0);
+    expect(metrics.contentHeight).toBeGreaterThan(metrics.height);
+    const submitBox = await submit.boundingBox();
+    expect(submitBox).not.toBeNull();
+    expect(metrics.bottom).toBeLessThan(submitBox!.y);
+    expect(submitBox!.y + submitBox!.height).toBeLessThanOrEqual(height);
+    const bunBox = await topBun.boundingBox();
+
+    await filling.hover();
+    await page.mouse.wheel(0, 10000);
+    await expect
+      .poll(() => filling.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0);
+    await expect(filling.getByRole('listitem').last()).toBeInViewport();
+    expect(await topBun.boundingBox()).toEqual(bunBox);
+  });
+}
+
+test('оверлей заказа перекрывает карточки и не пропускает клик к другому заказу', async ({
+  page,
+  api,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  api.orders = [makeOrder(123), makeOrder(124), makeOrder(125)];
+  await page.goto('/feed');
+  const secondImage = page
+    .getByRole('link', { name: /#000124/ })
+    .locator('img')
+    .first();
+  const imageBox = await secondImage.boundingBox();
+  expect(imageBox).not.toBeNull();
+  const point = {
+    x: imageBox!.x + imageBox!.width / 2,
+    y: imageBox!.y + imageBox!.height / 2,
+  };
+
+  await page.getByRole('link', { name: /#000123/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  const modalBox = await page.getByRole('dialog').boundingBox();
+  expect(point.x).toBeLessThan(modalBox!.x);
+  const cardReceivesClick = await page.evaluate(
+    ({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('a')),
+    point
+  );
+  expect(cardReceivesClick).toBe(false);
+  await page.mouse.click(point.x, point.y);
+  await expect(page).toHaveURL('http://localhost:4000/feed');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });
