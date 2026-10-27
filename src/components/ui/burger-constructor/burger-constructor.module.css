@@ -1,25 +1,21 @@
 .burger_constructor {
   display: flex;
-  flex: 1;
   flex-direction: column;
   width: 600px;
-  min-height: 0;
   padding-bottom: 20px;
   color: #f2f2f3;
 }
 
 .elements {
-  flex: 1;
-  min-height: 0;
+  min-height: 100px;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
+  overflow-y: scroll;
   list-style-type: none;
 }
 
 .total {
   display: flex;
-  flex-shrink: 0;
   justify-content: flex-end;
   align-items: center;
 }
@@ -39,7 +35,6 @@
 
 .noBuns {
   display: flex;
-  flex-shrink: 0;
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
@@ -64,7 +59,6 @@
 
 .element {
   display: flex;
-  flex-shrink: 0;
   justify-content: flex-end;
   align-items: center;
 }

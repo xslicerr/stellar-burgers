@@ -1,16 +1,12 @@
 .containerMain {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  width: 100%;
   max-width: 1240px;
-  min-height: 0;
   margin: 0 auto;
   overflow: hidden;
 }
 
 .title {
-  flex-shrink: 0;
   width: 100%;
   max-width: 1260px;
   margin-right: auto;
@@ -19,8 +15,7 @@
 
 .main {
   display: flex;
-  flex: 1;
   justify-content: space-between;
-  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
