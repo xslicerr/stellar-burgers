@@ -18,6 +18,9 @@ export const FeedUI = memo(function FeedUI({
       </div>
       <div className={styles.main}>
         <div className={styles.columnOrders}>
+          {!orders.length && (
+            <p className="text text_type_main-default">В ленте пока нет заказов</p>
+          )}
           <OrdersList orders={orders} />
         </div>
         <div className={styles.columnInfo}>

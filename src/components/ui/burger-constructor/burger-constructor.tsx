@@ -6,6 +6,8 @@ import {
 } from '@krgaa/react-developer-burger-ui-components';
 import { Preloader, OrderDetailsUI } from '@ui';
 
+import { RequestError } from '@components/request-error';
+
 import type { BurgerConstructorUIProps } from './type';
 import type { TConstructorIngredient } from '@utils-types';
 
@@ -16,6 +18,7 @@ export const BurgerConstructorUI = ({
   orderRequest,
   price,
   orderModalData,
+  orderError,
   onOrderClick,
   closeOrderModal,
 }: BurgerConstructorUIProps): React.JSX.Element => (
@@ -77,10 +80,18 @@ export const BurgerConstructorUI = ({
         <p className={`text ${styles.text} mr-2`}>{price}</p>
         <CurrencyIcon type="primary" />
       </div>
-      <Button htmlType="button" type="primary" size="large" onClick={onOrderClick}>
+      <Button
+        htmlType="button"
+        type="primary"
+        size="large"
+        onClick={onOrderClick}
+        disabled={orderRequest}
+      >
         Оформить заказ
       </Button>
     </div>
+
+    {orderError && <RequestError message={orderError} />}
 
     {orderRequest && (
       <Modal onClose={closeOrderModal} title={'Оформляем заказ...'}>
