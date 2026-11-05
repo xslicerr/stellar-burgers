@@ -18,7 +18,7 @@ export const OrderInfoUI = memo(function OrderInfoUI({
         {orderInfo.name}
       </h3>
       <OrderStatus status={orderInfo.status} />
-      <p className={`text text_type_main-medium pt-15 pb=6`}>Состав:</p>
+      <p className="text text_type_main-medium pt-15 pb-6">Состав:</p>
       <ul className={`${styles.list} mb-8`}>
         {Object.values(orderInfo.ingredientsInfo).map((item, index) => (
           <li className={`pb-4 pr-6 ${styles.item}`} key={index}>

@@ -12,6 +12,7 @@ export const ProfileUI = ({
   handleSubmit,
   handleCancel,
   handleInputChange,
+  isLoading = false,
 }: ProfileUIProps): React.JSX.Element => (
   <main className={styles.container}>
     <div className={`mt-30 mr-15 ${styles.menu}`}>
@@ -65,11 +66,12 @@ export const ProfileUI = ({
               htmlType="button"
               size="medium"
               onClick={handleCancel}
+              disabled={isLoading}
             >
               Отменить
             </Button>
-            <Button type="primary" size="medium" htmlType="submit">
-              Сохранить
+            <Button type="primary" size="medium" htmlType="submit" disabled={isLoading}>
+              {isLoading ? 'Сохраняем...' : 'Сохранить'}
             </Button>
           </div>
         )}

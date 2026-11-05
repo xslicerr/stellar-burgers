@@ -16,6 +16,7 @@ export const LoginUI = ({
   handleSubmit,
   password,
   setPassword,
+  isLoading = false,
 }: LoginUIProps): React.JSX.Element => (
   <main className={styles.container}>
     <div className={`pt-6 ${styles.wrapCenter}`}>
@@ -42,8 +43,8 @@ export const LoginUI = ({
             />
           </div>
           <div className={`pb-6 ${styles.button}`}>
-            <Button type="primary" size="medium" htmlType="submit">
-              Войти
+            <Button type="primary" size="medium" htmlType="submit" disabled={isLoading}>
+              {isLoading ? 'Входим...' : 'Войти'}
             </Button>
           </div>
           {errorText && (

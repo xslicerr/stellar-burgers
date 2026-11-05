@@ -1,5 +1,36 @@
 # Стартер на TypeScript для проекта Stellar Burger
 
+## Запуск
+
+1. Установите зависимости: `npm ci`.
+2. Скопируйте `.env.example` в `.env`. Рабочее значение: `BURGER_API_URL=https://norma.ffapi.ru/api`.
+3. Запустите `npm start` и откройте [http://localhost:4000](http://localhost:4000).
+
+После изменения `.env` перезапустите сервер. Каталог и публичная лента доступны без входа. История и профиль требуют авторизации. Лента и история автоматически обновляются через REST каждые пять секунд; после создания заказа обновляются сразу.
+
+## Проверки
+
+```bash
+npx tsc -p tsconfig.app.json --noEmit
+npm run check
+npm test -- --runInBand
+npm run build
+```
+
+Браузерные тесты используют подмену API и не создают реальные аккаунты или заказы:
+
+```bash
+npx playwright install chromium
+npm run e2e -- --workers=2
+```
+
+В Windows можно использовать уже установленный Edge без скачивания Chromium. В PowerShell:
+
+```powershell
+$env:E2E_BROWSER_CHANNEL = 'msedge'
+npm run e2e -- --workers=2
+```
+
 ## Процедура создания коммита с проверками
 
 При создании коммита автоматически запускаются проверка линтерами `stylelint`, `eslint` и форматирование `prettier`.
