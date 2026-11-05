@@ -14,6 +14,7 @@
 npx tsc -p tsconfig.app.json --noEmit
 npm run check
 npm test -- --runInBand
+npm run test:coverage
 npm run build
 ```
 
@@ -22,6 +23,46 @@ npm run build
 ```bash
 npx playwright install chromium
 npm run e2e -- --workers=2
+```
+
+## Тесты проектной работы
+
+`tests/constructor.pl.tsx` проверяет добавление и замену булок, добавление начинок,
+удаление и перестановку ингредиентов, открытие окна ингредиента и закрытие
+крестиком, Escape и кликом по оверлею. Отдельный сценарий подставляет тестовые
+access- и refresh-токены, собирает бургер, проверяет состав и авторизацию запроса
+заказа, номер в модальном окне, пустой конструктор и закрытие окна.
+
+Успешный ответ `GET /api/ingredients` воспроизводится через `page.routeFromHAR`
+из `tests/fixtures/ingredients.har`. HAR содержит пять вымышленных ингредиентов
+и встроенные SVG-картинки. Данные пользователя и ответ создания заказа находятся
+в `tests/fixtures/user.json` и `tests/fixtures/order.json`. Остальные API-запросы
+тоже перехватываются; неизвестный эндпоинт завершает тест ошибкой. Playwright
+сам запускает Vite с тестовым адресом API. Реальные заказы и аккаунты не создаются.
+
+Юнит-тесты расположены рядом со слайсами:
+
+- `ingredients-slice.test.ts`: начальное состояние при `UNKNOWN`, сохранение
+  состояния при неизвестном экшене, `pending`, `fulfilled`, `rejected`, пустой
+  ответ сервера и ошибка без сообщения.
+- `constructor-slice.test.ts`: начальное состояние при `UNKNOWN`, все четыре
+  экшена конструктора, уникальные id повторяющихся ингредиентов, замена булки,
+  добавление соуса, перестановка в обе стороны и некорректные индексы.
+- `store.test.ts`: взаимодействие слайсов при загрузке ингредиентов и создании
+  заказа, повторные запросы и обработка запоздавших ответов.
+
+`npm run test:coverage` выводит покрытие двух обязательных слайсов в терминал
+и создаёт HTML-отчёт `coverage/index.html` и `coverage/lcov.info`.
+Проценты относятся к этим слайсам, а не ко всему приложению.
+Настройки отчёта описаны в [документации Jest](https://jestjs.io/docs/configuration#collectcoverage-boolean),
+воспроизведение HAR — в [документации Playwright](https://playwright.dev/docs/mock#replaying-from-har).
+
+Проверить типы приложения и обоих наборов тестов можно отдельно:
+
+```bash
+npx tsc -p tsconfig.app.json --noEmit
+npx tsc -p tsconfig.test.json --noEmit
+npx tsc -p tsconfig.e2e.json --noEmit
 ```
 
 В Windows можно использовать уже установленный Edge без скачивания Chromium. В PowerShell:

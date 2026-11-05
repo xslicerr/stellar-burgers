@@ -23,6 +23,38 @@ const ingredient: TIngredient = {
 };
 
 describe('Конструктор бургера', () => {
+  test('неизвестный экшен с undefined возвращает начальное состояние', () => {
+    expect(constructorReducer(undefined, { type: 'UNKNOWN' })).toEqual({
+      bun: null,
+      ingredients: [],
+    });
+  });
+
+  test('добавление начинки сохраняет её данные и присваивает id', () => {
+    const action = addIngredient(ingredient);
+    expect(action.payload.id).toEqual(expect.any(String));
+    expect(action.payload.id).not.toBe('');
+    expect(constructorReducer(undefined, action)).toEqual({
+      bun: null,
+      ingredients: [action.payload],
+    });
+    expect(ingredient).not.toHaveProperty('id');
+  });
+
+  test('добавление соуса сохраняет булку и существующую начинку', () => {
+    let state = constructorReducer(
+      undefined,
+      addIngredient({ ...ingredient, type: 'bun', _id: 'bun' })
+    );
+    state = constructorReducer(state, addIngredient(ingredient));
+    const action = addIngredient({ ...ingredient, type: 'sauce', _id: 'sauce' });
+    expect(constructorReducer(state, action)).toEqual({
+      bun: state.bun,
+      ingredients: [...state.ingredients, action.payload],
+    });
+    expect(state.ingredients).toHaveLength(1);
+  });
+
   test('булка заменяет предыдущую и не попадает в начинку', () => {
     let state = constructorReducer(
       undefined,
@@ -53,10 +85,43 @@ describe('Конструктор бургера', () => {
     );
   });
   test('очистка возвращает пустой конструктор', () => {
-    const state = constructorReducer(undefined, addIngredient(ingredient));
+    let state = constructorReducer(
+      undefined,
+      addIngredient({ ...ingredient, _id: 'bun', type: 'bun' })
+    );
+    state = constructorReducer(state, addIngredient(ingredient));
     expect(constructorReducer(state, clearConstructor())).toEqual({
       bun: null,
       ingredients: [],
     });
+  });
+
+  test('удаление неизвестного id не меняет состав бургера', () => {
+    const state = constructorReducer(undefined, addIngredient(ingredient));
+    expect(constructorReducer(state, removeIngredient('missing'))).toEqual(state);
+  });
+
+  test.each([
+    { from: -1, to: 0 },
+    { from: 0, to: -1 },
+    { from: 2, to: 0 },
+    { from: 0, to: 2 },
+    { from: 1, to: 1 },
+  ])('перемещение %j не меняет порядок', (positions) => {
+    let state = constructorReducer(undefined, addIngredient(ingredient));
+    state = constructorReducer(state, addIngredient({ ...ingredient, _id: 'second' }));
+    expect(constructorReducer(state, moveIngredient(positions))).toEqual(state);
+  });
+
+  test('перемещение вверх сохраняет экземпляры и исходное состояние', () => {
+    let state = constructorReducer(undefined, addIngredient(ingredient));
+    state = constructorReducer(state, addIngredient({ ...ingredient, _id: 'second' }));
+    const [first, second] = state.ingredients;
+    expect(constructorReducer(state, moveIngredient({ from: 1, to: 0 }))).toEqual({
+      bun: null,
+      ingredients: [second, first],
+    });
+    expect(state.ingredients).toEqual([first, second]);
+    expect(constructorReducer(state, { type: 'UNKNOWN' })).toBe(state);
   });
 });

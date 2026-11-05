@@ -19,6 +19,7 @@
     "preview": "vite preview",
     "stylelint": "stylelint \"./src/**/*.css\" --fix",
     "test": "jest",
+    "test:coverage": "jest --coverage --runInBand",
     "test:storybook": "test-storybook",
     "storybook:test": "start-server-and-test storybook http://localhost:6006 test-storybook",
     "storybook": "storybook dev -p 6006",

@@ -1,28 +1,10 @@
 import { expect, test as base } from '@playwright/test';
 
+import orderResponse from './fixtures/order.json' with { type: 'json' };
+import userResponse from './fixtures/user.json' with { type: 'json' };
+
 import type { Page } from '@playwright/test';
 
-const pixel =
-  'data:image/svg+xml,' +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" rx="25" fill="orange"/></svg>'
-  );
-const ingredients = [
-  { _id: 'bun-1', name: 'Космическая булка', type: 'bun', price: 100 },
-  { _id: 'bun-2', name: 'Вторая булка', type: 'bun', price: 150 },
-  { _id: 'main-1', name: 'Метеоритная котлета', type: 'main', price: 50 },
-  { _id: 'main-2', name: 'Лунный сыр', type: 'main', price: 30 },
-  { _id: 'sauce-1', name: 'Соус комета', type: 'sauce', price: 20 },
-].map((item) => ({
-  ...item,
-  proteins: 10,
-  fat: 5,
-  carbohydrates: 20,
-  calories: 200,
-  image: pixel,
-  image_mobile: pixel,
-  image_large: pixel,
-}));
 const makeOrder = (number = 123, status = 'done') => ({
   _id: `order-${number}`,
   number,
@@ -44,13 +26,18 @@ type Api = {
 const test = base.extend<{ api: Api }>({
   api: async ({ page }, use) => {
     const api: Api = {
-      user: { name: 'Никита', email: 'nikita@example.com' },
+      user: { ...userResponse.user },
       orders: [makeOrder()],
       requests: [],
       failOrder: false,
       failIngredients: false,
     };
-    await page.route('https://norma.ffapi.ru/api/**', async (route) => {
+    await page.routeFromHAR('tests/fixtures/ingredients.har', {
+      url: '**/api/ingredients',
+      update: false,
+      notFound: 'abort',
+    });
+    await page.route('**/api/**', async (route) => {
       const request = route.request();
       const path = new URL(request.url()).pathname.replace('/api', '');
       const method = request.method();
@@ -64,7 +51,11 @@ const test = base.extend<{ api: Api }>({
         if (api.failIngredients) {
           status = 500;
           response = { success: false, message: 'Ошибка ингредиентов' };
-        } else response = { success: true, data: ingredients };
+        } else {
+          // Следующий обработчик воспроизводит успешный ответ из HAR.
+          await route.fallback();
+          return;
+        }
       } else if (path === '/auth/login' || path === '/auth/register') {
         if (body.password === 'wrong') {
           status = 401;
@@ -103,9 +94,12 @@ const test = base.extend<{ api: Api }>({
           status = 500;
           response = { success: false, message: 'Заказ не принят' };
         } else {
-          const order = { ...makeOrder(124), ingredients: body.ingredients as string[] };
+          const order = {
+            ...orderResponse.order,
+            ingredients: body.ingredients as string[],
+          };
           api.orders = [order, ...api.orders];
-          response = { success: true, name: order.name, order };
+          response = { ...orderResponse, order };
         }
       } else if (path === '/orders') response = { success: true, orders: api.orders };
       else if (path.startsWith('/orders/'))
@@ -115,6 +109,11 @@ const test = base.extend<{ api: Api }>({
             (order) => order.number === Number(path.split('/').pop())
           ),
         };
+      else if (
+        !['/auth/logout', '/password-reset', '/password-reset/reset'].includes(path)
+      ) {
+        throw new Error(`Неожиданный запрос API: ${method} ${path}`);
+      }
       await route.fulfill({
         status,
         contentType: 'application/json',
@@ -155,8 +154,12 @@ test('ингредиент открывается над конструктор�
   await page.getByRole('link', { name: /Космическая булка/ }).click();
   await expect(page).toHaveURL(/\/ingredients\/bun-1$/);
   await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { name: 'Космическая булка' })
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Соберите бургер' })).toBeVisible();
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL('http://localhost:4000/');
   await page.getByRole('link', { name: /Космическая булка/ }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -188,6 +191,12 @@ test('гость собирает бургер; булка считается д
   const constructor = page
     .locator('section')
     .filter({ has: page.getByRole('button', { name: 'Оформить заказ' }) });
+  await expect(constructor.getByText('Космическая булка (верх)')).toBeVisible();
+  await expect(constructor.getByText('Космическая булка (низ)')).toBeVisible();
+  await expect(
+    constructor.getByText('Метеоритная котлета', { exact: true })
+  ).toHaveCount(2);
+  await expect(constructor.getByText('Лунный сыр', { exact: true })).toBeVisible();
   await expect(constructor.getByText('330', { exact: true })).toBeVisible();
   await expect(constructor.getByRole('listitem')).toHaveCount(3);
   await add(page, 'Вторая булка');
@@ -203,6 +212,56 @@ test('гость собирает бургер; булка считается д
   const closeButton = rows.nth(0).locator('[class*="action"]').last();
   await closeButton.click();
   await expect(rows).toHaveCount(2);
+});
+
+test('заказ с моковыми токенами показывает номер, очищает конструктор и закрывается', async ({
+  page,
+  api,
+}) => {
+  await authorize(page);
+  await page.goto('/');
+  await expect(
+    page.getByRole('link', { name: userResponse.user.name, exact: true })
+  ).toBeVisible();
+  await add(page, 'Космическая булка');
+  await add(page, 'Метеоритная котлета');
+  await add(page, 'Соус комета');
+
+  const constructor = page.locator('section').filter({
+    has: page.getByRole('button', { name: 'Оформить заказ' }),
+  });
+  await expect(constructor.getByRole('listitem')).toHaveCount(2);
+  await expect(constructor.getByText('270', { exact: true })).toBeVisible();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      new URL(request.url()).pathname === '/api/orders' && request.method() === 'POST'
+  );
+  await page.getByRole('button', { name: 'Оформить заказ' }).click();
+  const request = await requestPromise;
+  expect(request.headers().authorization).toBe('Bearer test-access');
+  expect(request.postDataJSON()).toEqual({
+    ingredients: ['bun-1', 'main-1', 'sauce-1', 'bun-1'],
+  });
+  expect(api.requests.some(({ path }) => path === '/auth/user')).toBe(true);
+
+  const modal = page.getByRole('dialog', { name: 'Заказ оформлен' });
+  await expect(modal).toBeVisible();
+  await expect(
+    modal.getByRole('heading', { name: String(orderResponse.order.number), exact: true })
+  ).toBeVisible();
+  await expect(modal.getByText('Ваш заказ начали готовить')).toBeVisible();
+  await expect(constructor.getByText('Выберите булки', { exact: true })).toHaveCount(2);
+  await expect(constructor.getByText('Выберите начинку', { exact: true })).toBeVisible();
+  await expect(constructor.getByText('0', { exact: true })).toBeVisible();
+  await expect(
+    constructor.getByText('Метеоритная котлета', { exact: true })
+  ).toHaveCount(0);
+  await expect(constructor.getByText('Соус комета', { exact: true })).toHaveCount(0);
+
+  await modal.getByRole('button', { name: 'Закрыть', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL('http://localhost:4000/');
+  await expect(constructor.getByText('Выберите начинку', { exact: true })).toBeVisible();
 });
 test('оформление гостем ведёт на вход, после входа состав сохраняется и заказ виден в истории', async ({
   page,

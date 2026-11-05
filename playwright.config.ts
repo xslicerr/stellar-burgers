@@ -31,6 +31,7 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    serviceWorkers: 'block',
   },
 
   /* Configure projects for major browsers */
@@ -79,6 +80,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npm run start',
+    env: { BURGER_API_URL: 'https://norma.ffapi.ru/api' },
     url: 'http://localhost:4000',
     reuseExistingServer: !process.env.CI,
   },
