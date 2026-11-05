@@ -6,6 +6,12 @@ const config: Config = {
   setupFiles: ['<rootDir>/tests/jest.setup.cjs'],
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.test.ts'],
+  collectCoverageFrom: [
+    'src/services/slices/ingredients-slice.ts',
+    'src/services/slices/constructor-slice.ts',
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'html', 'lcov'],
   moduleNameMapper: {
     '^@api$': '<rootDir>/src/utils/burger-api',
     '^@api/(.*)$': '<rootDir>/src/utils/burger-api/$1',
@@ -39,7 +45,7 @@ const config: Config = {
       'ts-jest',
       {
         tsconfig: 'tsconfig.test.json',
-        diagnostics: false,
+        diagnostics: true,
       },
     ],
   },

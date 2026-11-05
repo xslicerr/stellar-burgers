@@ -27,6 +27,7 @@ storybook-static
 
 playwright-report
 test-results
+coverage
 *storybook.log
 
 # Local env
